@@ -3,6 +3,7 @@ using System.Linq;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using System.Configuration;
 using spotify;
 using discordrpc;
 
@@ -31,9 +32,9 @@ namespace discordify {
 		private const int MEDIA_PAPL = 0xB3;
 		private const int MEDIA_MUTE = 0xAD;
 
-		private const string DISCORD_CLIENT_ID = "YOUR_DISCORD_CLIENT_ID";
-		private const string SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID";
-		private const string SPOTIFY_CLIENT_SECRET = "YOUR_SPOTIFY_CLIENT_SECRET";
+		private string DISCORD_CLIENT_ID = ConfigurationManager.AppSettings.Get("discord_client_id");
+		private string SPOTIFY_CLIENT_ID = ConfigurationManager.AppSettings.Get("spotify_client_id");
+		private string SPOTIFY_CLIENT_SECRET = ConfigurationManager.AppSettings.Get("spotify_client_secret");
 
 		private static DiscordRpc.RichPresence presence;
 		private static DiscordRpc.EventHandlers handlers;
@@ -42,7 +43,6 @@ namespace discordify {
 
 		public Form1() {
 			InitializeComponent();
-
 			// "omit" the args since we won't actually use them
 			FormClosing += (object _, FormClosingEventArgs __) => DiscordRpc.Shutdown();
 

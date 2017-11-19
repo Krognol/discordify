@@ -4,9 +4,9 @@
 
 *  Clone the repository `git clone https://github.com/Krognol/discordify`.
 *  Create an application [at the discord dev pages](https://discordapp.com/developers/applications/me).
-* * You can name it whatever, copy the `Client ID` and set that in `Form1.cs:DISCORD_CLIENT_ID` .
+* * You can name it whatever, copy the `Client ID` and set that in `App.config:discord_client_id` .
 * Upload a large asset for an icon and name it `spotify_large`.
-* Create a Spotify api application, and copy the Client ID and secret and set that in `Form1.cs:SPOTIFY_CLIENT_ID/SECRET`
+* Create a Spotify api application, and copy the Client ID and secret and set that in `App.config:spotify_client_id/secret`
 * Launch discordify and click on `Connect`
 * Go to your settings in Discord, and go to Games
 * Click on `Add it!` next to `Not seeing your game?`
