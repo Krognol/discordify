@@ -1,10 +1,13 @@
 # discordify
 
+There's a pre-built binary under releases for windows. You'll just have to edit the `discordify.exe.config` a little.
+
 ## Setting up
 
 *  Clone the repository `git clone https://github.com/Krognol/discordify`.
 *  Create an application [at the discord dev pages](https://discordapp.com/developers/applications/me).
 * * You can name it whatever, copy the `Client ID` and set that in `App.config:discord_client_id` .
+* * Click on `Enable rich presence` at the bottom of the page.
 * Upload a large asset for an icon and name it `spotify_large`.
 * Create a Spotify api application, and copy the Client ID and secret and set that in `App.config:spotify_client_id/secret`
 * Launch discordify and click on `Connect`
