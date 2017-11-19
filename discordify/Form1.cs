@@ -32,9 +32,9 @@ namespace discordify {
 		private const int MEDIA_PAPL = 0xB3;
 		private const int MEDIA_MUTE = 0xAD;
 
-		private string DISCORD_CLIENT_ID = ConfigurationManager.AppSettings.Get("discord_client_id");
-		private string SPOTIFY_CLIENT_ID = ConfigurationManager.AppSettings.Get("spotify_client_id");
-		private string SPOTIFY_CLIENT_SECRET = ConfigurationManager.AppSettings.Get("spotify_client_secret");
+		private string DISCORD_CLIENT_ID;
+		private string SPOTIFY_CLIENT_ID;
+		private string SPOTIFY_CLIENT_SECRET;
 
 		private static DiscordRpc.RichPresence presence;
 		private static DiscordRpc.EventHandlers handlers;
@@ -45,6 +45,10 @@ namespace discordify {
 			InitializeComponent();
 			// "omit" the args since we won't actually use them
 			FormClosing += (object _, FormClosingEventArgs __) => DiscordRpc.Shutdown();
+
+			DISCORD_CLIENT_ID = ConfigurationManager.AppSettings["discord_client_id"];
+			SPOTIFY_CLIENT_ID = ConfigurationManager.AppSettings["spotify_client_id"];
+			SPOTIFY_CLIENT_SECRET = ConfigurationManager.AppSettings["spotify_client_secret"];
 
 			// Initialize the Spotify client
 			spotifyClient = new Spotify(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
