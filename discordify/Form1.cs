@@ -23,8 +23,8 @@ namespace discordify {
 
 		private const int WH_KEYBOARD_LL = 13;
 		private const int WM_KEYDOWN = 0x0100;
-		private static LowLevelKeyboardProc _proc = HookCallback;
-		private static IntPtr _hookID = IntPtr.Zero;
+		public static LowLevelKeyboardProc _proc = HookCallback;
+		public static IntPtr _hookID = IntPtr.Zero;
 
 		private const int MEDIA_NEXT = 0xB0;
 		private const int MEDIA_PREV = 0xB1;
@@ -52,22 +52,12 @@ namespace discordify {
 			// These won't change if your application is set up properly 
 			// so init them at the start
 			presence.largeImageKey = "spotify_large";
-			presence.smallImageKey = "spotify_small";
 
 			curStatus = new Status {
 				CurArtist = "",
 				CurTrack = "",
 				PlayStatus = PlayingStatus.Paused
 			};
-
-			// We run Show() here since Application.Run() will hijack the thread 
-			// and won't show the window otherwise
-			Show();
-
-			// Set the hook for intercepting the media key presses
-			_hookID = SetHook(_proc);
-			Application.Run();
-			UnhookWindowsHookEx(_hookID);
 		}
 
 		// Call DiscordRpc.Shutdown when clicking disconnect button
@@ -141,15 +131,16 @@ namespace discordify {
 		private static long DateTimeToTimestamp(DateTime dt) => (dt.Ticks - 621355968000000000) / 10000000;
 
 		// Key intercepting stuff
+		// Taken from https://blogs.msdn.microsoft.com/toub/2006/05/03/low-level-keyboard-hook-in-c/
 
-		private static IntPtr SetHook(LowLevelKeyboardProc proc) {
+		public static IntPtr SetHook(LowLevelKeyboardProc proc) {
 			using (var curProc = Process.GetCurrentProcess())
 			using (var curModule = curProc.MainModule) {
 				return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
 			}
 		}
 
-		private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+		public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
 		private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam) {
 			if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN) {
@@ -183,7 +174,7 @@ namespace discordify {
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+		public static extern bool UnhookWindowsHookEx(IntPtr hhk);
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 		private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
