@@ -21,6 +21,7 @@ namespace discordify {
 	}
 
 	public partial class Form1 : Form {
+		private static Form1 self;
 		private static Spotify spotifyClient;
 
 		private const int WH_KEYBOARD_LL = 13;
@@ -35,9 +36,9 @@ namespace discordify {
 		private const int MEDIA_PAPL = 0xB3;
 		private const int MEDIA_MUTE = 0xAD;
 
-		private string DISCORD_CLIENT_ID;
-		private string SPOTIFY_CLIENT_ID;
-		private string SPOTIFY_CLIENT_SECRET;
+		private static string DISCORD_CLIENT_ID;
+		private static string SPOTIFY_CLIENT_ID;
+		private static string SPOTIFY_CLIENT_SECRET;
 
 		private static DiscordRpc.RichPresence presence;
 		private static DiscordRpc.EventHandlers handlers;
@@ -101,6 +102,8 @@ namespace discordify {
 				CurTrack = "",
 				PlayStatus = PlayingStatus.Paused
 			};
+
+			self = this;
 		}
 
 		private void updateStatus(string text) => toolStripStatusLabel2.Text = text;
@@ -122,6 +125,12 @@ namespace discordify {
 		// Connect button handler
 		private void discordConnectButton_Click(object sender, EventArgs e) {
 			if (initialized) return;
+
+			if (DISCORD_CLIENT_ID == "") {
+				updateStatus("Missing Discord client ID");
+				return;
+			}
+
 			// Initialize the event handlers and DiscordRpc so we can begin
 			// updating our rich presence
 			handlers = new DiscordRpc.EventHandlers {
@@ -134,10 +143,16 @@ namespace discordify {
 			DiscordRpc.Initialize(DISCORD_CLIENT_ID, ref handlers, true, null);
 			DiscordRpc.RunCallbacks();
 			initialized = true;
+			updateStatus("Connected!");
 		}
 
-		private static async void UpdatePresence() {
+		private async void UpdatePresence() {
 			if (!initialized) return;
+
+			if (SPOTIFY_CLIENT_ID == "" || SPOTIFY_CLIENT_SECRET == "") {
+				updateStatus("Missing Spotify client ID or secret!");
+				return;
+			}
 
 			string[] splitChar = { " - " };
 			string track = "", artist = "";
@@ -177,6 +192,7 @@ namespace discordify {
 				presence.endTimestamp = DateTimeToTimestamp(now.AddMilliseconds((int)tracks?.Items[0].DurationMs));
 
 				DiscordRpc.UpdatePresence(ref presence);
+				updateStatus(string.Format("Updated status: {0} y {1}", item?.Name, item?.Artists[0].Name));
 			}
 		}
 
@@ -216,13 +232,13 @@ namespace discordify {
 						curStatus.PlayStatus = PlayingStatus.Paused;
 						break;
 					}
-					UpdatePresence();
+					self.UpdatePresence();
 					break;
 				case MEDIA_NEXT:
 				case MEDIA_PREV:
 					if (DateTime.UtcNow.Subtract(lastSwitch) >= TimeSpan.FromSeconds(5)) {
 						lastSwitch = DateTime.UtcNow;
-						UpdatePresence();
+						self.UpdatePresence();
 					}
 					break;
 				}

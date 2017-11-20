@@ -62,7 +62,7 @@
 			this.discordConnectButton.Name = "discordConnectButton";
 			this.discordConnectButton.Size = new System.Drawing.Size(75, 23);
 			this.discordConnectButton.TabIndex = 2;
-			this.discordConnectButton.Text = "Connect";
+			this.discordConnectButton.Text = "Initialize";
 			this.discordConnectButton.UseVisualStyleBackColor = true;
 			this.discordConnectButton.Click += new System.EventHandler(this.discordConnectButton_Click);
 			// 
@@ -72,7 +72,7 @@
 			this.discordDisconnectButton.Name = "discordDisconnectButton";
 			this.discordDisconnectButton.Size = new System.Drawing.Size(75, 23);
 			this.discordDisconnectButton.TabIndex = 3;
-			this.discordDisconnectButton.Text = "Disconnect";
+			this.discordDisconnectButton.Text = "Shutdown";
 			this.discordDisconnectButton.UseVisualStyleBackColor = true;
 			this.discordDisconnectButton.Click += new System.EventHandler(this.discordDisconnectButton_Click);
 			// 
