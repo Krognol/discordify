@@ -17,6 +17,13 @@ There's a pre-built binary under releases for Windows. You just have to edit the
 * Click on `Discordify.exe`
 * Done!
 
+You can add a lookup for another music application in the config file under the `appSettings` section.
+E.g. 
+```xml
+<add key="other_process_name" value="other music program name">
+<add key="other_process_sep" value="the separator">
+```
+
 You should see a rich presence on your profile if you click on it after a few seconds.
 
 ![example](https://i.imgur.com/od6xC8j.png)
