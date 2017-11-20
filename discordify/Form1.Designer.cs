@@ -30,6 +30,7 @@
 			this.discordConnectButton = new System.Windows.Forms.Button();
 			this.discordDisconnectButton = new System.Windows.Forms.Button();
 			this.timer1 = new System.Windows.Forms.Timer(this.components);
+			this.discordQuitButton = new System.Windows.Forms.Button();
 			this.statusStrip1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -67,7 +68,7 @@
 			// 
 			// discordDisconnectButton
 			// 
-			this.discordDisconnectButton.Location = new System.Drawing.Point(347, 12);
+			this.discordDisconnectButton.Location = new System.Drawing.Point(172, 12);
 			this.discordDisconnectButton.Name = "discordDisconnectButton";
 			this.discordDisconnectButton.Size = new System.Drawing.Size(75, 23);
 			this.discordDisconnectButton.TabIndex = 3;
@@ -81,11 +82,22 @@
 			this.timer1.Interval = 10000;
 			this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
 			// 
+			// discordQuitButton
+			// 
+			this.discordQuitButton.Location = new System.Drawing.Point(347, 12);
+			this.discordQuitButton.Name = "discordQuitButton";
+			this.discordQuitButton.Size = new System.Drawing.Size(75, 23);
+			this.discordQuitButton.TabIndex = 5;
+			this.discordQuitButton.Text = "Quit";
+			this.discordQuitButton.UseVisualStyleBackColor = true;
+			this.discordQuitButton.Click += new System.EventHandler(this.discordQuitButton_Click);
+			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(434, 73);
+			this.Controls.Add(this.discordQuitButton);
 			this.Controls.Add(this.discordDisconnectButton);
 			this.Controls.Add(this.discordConnectButton);
 			this.Controls.Add(this.statusStrip1);
@@ -109,6 +121,7 @@
 		private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
 		private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel2;
 		private System.Windows.Forms.Timer timer1;
+		private System.Windows.Forms.Button discordQuitButton;
 	}
 }
 

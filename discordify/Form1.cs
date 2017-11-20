@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Configuration;
+using System.Collections.Generic;
 using spotify;
 using discordrpc;
 
@@ -27,6 +28,8 @@ namespace discordify {
 		public static LowLevelKeyboardProc _proc = HookCallback;
 		public static IntPtr _hookID = IntPtr.Zero;
 
+		// Media virtual key codes
+		// can probably remove the MUTE one
 		private const int MEDIA_NEXT = 0xB0;
 		private const int MEDIA_PREV = 0xB1;
 		private const int MEDIA_PAPL = 0xB3;
@@ -40,15 +43,51 @@ namespace discordify {
 		private static DiscordRpc.EventHandlers handlers;
 		private static Status curStatus;
 		private static DateTime lastSwitch = DateTime.UtcNow;
+		private static bool initialized = false;
+
+		// Used for other music players
+		private static List<string> otherProcessNames = new List<string>();
+		private static List<string> otherProcessSeparator = new List<string>();
 
 		public Form1() {
 			InitializeComponent();
-			// "omit" the args since we won't actually use them
-			FormClosing += (object _, FormClosingEventArgs __) => DiscordRpc.Shutdown();
+
+			FormClosing += (object o, FormClosingEventArgs e) => {
+				e.Cancel = true;
+				Visible = false;
+				ShowInTaskbar = false;
+			};
+
+			var tray = new NotifyIcon {
+				Text = "Discordify",
+				Icon = new System.Drawing.Icon("Resources/tray_icon.ico")
+			};
+			var contexMenu = new ContextMenu();
+			contexMenu.MenuItems.Add(new MenuItem("Connect", discordConnectButton_Click));
+			contexMenu.MenuItems.Add(new MenuItem("Disconnect", discordDisconnectButton_Click));
+			contexMenu.MenuItems.Add(new MenuItem("Quit", (object o, EventArgs e) => {
+				DiscordRpc.Shutdown();
+				Application.Exit();
+			}));
+			contexMenu.MenuItems.Add(new MenuItem("Show", (object o, EventArgs e) => {
+				if (!Visible) {
+					Visible = true;
+					ShowInTaskbar = true;
+				}
+			}));
+			tray.ContextMenu = contexMenu;
+			tray.Visible = true;
 
 			DISCORD_CLIENT_ID = ConfigurationManager.AppSettings["discord_client_id"];
 			SPOTIFY_CLIENT_ID = ConfigurationManager.AppSettings["spotify_client_id"];
 			SPOTIFY_CLIENT_SECRET = ConfigurationManager.AppSettings["spotify_client_secret"];
+
+			if (ConfigurationManager.AppSettings["other_process_name"] != null)
+				otherProcessNames.Add(ConfigurationManager.AppSettings["other_process_name"]);
+			otherProcessSeparator.Add(otherProcessNames.Count > 0 && ConfigurationManager.AppSettings["other_process_sep"] != null ?
+				ConfigurationManager.AppSettings["other_process_sep"] : "");
+
+			otherProcessNames.Add("Spotify");
 
 			// Initialize the Spotify client
 			spotifyClient = new Spotify(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
@@ -64,22 +103,25 @@ namespace discordify {
 			};
 		}
 
+		private void updateStatus(string text) => toolStripStatusLabel2.Text = text;
+
 		// Call DiscordRpc.Shutdown when clicking disconnect button
 		// This is probably redundant though since we call Shutdown
 		// on FormClosing
 		private void discordDisconnectButton_Click(object sender, EventArgs e) => DiscordRpc.Shutdown();
 
 		// DiscordRpc Ready callback
-		private void Ready() => toolStripStatusLabel2.Text = "Ready!";
+		private void Ready() => updateStatus("Ready!");
 
 		// DiscordRpc Disconnected callback
-		private void Disconnected(int errorCode, string message) => toolStripStatusLabel2.Text = string.Format("Error {0}: {1}", errorCode, message);
+		private void Disconnected(int errorCode, string message) => updateStatus(string.Format("Error {0}: {1}", errorCode, message));
 
 		// DiscordRpc Error callback
-		private void Error(int errorCode, string message) => toolStripStatusLabel2.Text = string.Format("Error {0}: {1}", errorCode, message);
+		private void Error(int errorCode, string message) => updateStatus(string.Format("Error {0}: {1}", errorCode, message));
 
 		// Connect button handler
 		private void discordConnectButton_Click(object sender, EventArgs e) {
+			if (initialized) return;
 			// Initialize the event handlers and DiscordRpc so we can begin
 			// updating our rich presence
 			handlers = new DiscordRpc.EventHandlers {
@@ -91,19 +133,28 @@ namespace discordify {
 
 			DiscordRpc.Initialize(DISCORD_CLIENT_ID, ref handlers, true, null);
 			DiscordRpc.RunCallbacks();
+			initialized = true;
 		}
 
 		private static async void UpdatePresence() {
-			string[] splitChar = { " - " };
-			string track, artist = "";
+			if (!initialized) return;
 
-			// The process that has the currently playing track seems to change every once in a while for some reason
-			using (var proc = (from p in Process.GetProcessesByName("Spotify") where p.MainWindowTitle != "" select p).FirstOrDefault()) {
-				// Split the artist and track name
-				var titleSplit = proc.MainWindowTitle.Split(splitChar, 2, StringSplitOptions.None);
-				artist = titleSplit[0];
-				track = titleSplit[1];
-			}
+			string[] splitChar = { " - " };
+			string track = "", artist = "";
+
+			foreach (var name in otherProcessNames)
+				using (var proc = (from p in Process.GetProcessesByName(name) where p.MainWindowTitle != "" select p).First()) {
+					if (name != "Spotify") splitChar = otherProcessSeparator.ToArray();
+					var titleSplit = proc.MainWindowTitle.Split(splitChar, 2, StringSplitOptions.None);
+					if(titleSplit.Length > 1){
+						artist = titleSplit[0];
+						track = titleSplit[1];
+					}
+					break;
+				}
+
+			// Check so we're actually playing something
+			if (track == "" || artist == "") return;
 
 			// Check so the current artist and track aren't the same as
 			if (curStatus.CurArtist == artist && curStatus.CurTrack == track) return;
@@ -111,14 +162,15 @@ namespace discordify {
 			curStatus.CurArtist = artist;
 			curStatus.CurTrack = track;
 
-			// Search for the track via spotify
+			// Search for the track via the spotify web api
 			var spotifyStuff = await spotifyClient.SearchTrack(Uri.EscapeDataString($"artist:{artist} {track}"));
 			Spotify.Tracks? tracks = null;
 			if (spotifyStuff.HasValue) tracks = spotifyStuff?.Tracks;
 
 			// Update the presence if the track was found
 			if (tracks != null && tracks?.Items.Count > 0) {
-				presence.details = $"Listening to {tracks?.Items[0].Name} by {tracks?.Items[0].Artists[0].Name}";
+				var item = tracks?.Items[0];
+				presence.details = $"Listening to {item?.Name} by {item?.Artists[0].Name}";
 
 				var now = DateTime.UtcNow;
 				presence.startTimestamp = DateTimeToTimestamp(now);
@@ -126,6 +178,11 @@ namespace discordify {
 
 				DiscordRpc.UpdatePresence(ref presence);
 			}
+		}
+
+		private void discordQuitButton_Click(object sender, EventArgs e) {
+			DiscordRpc.Shutdown();
+			Application.Exit();
 		}
 
 		// Every 10 seconds we update the presence
@@ -149,9 +206,8 @@ namespace discordify {
 		private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam) {
 			if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN) {
 				var vkCode = Marshal.ReadInt32(lParam);
-				if (vkCode == MEDIA_PAPL) {
-					// Paused/Playing can be used to change the presence details
-					// or the timestamp
+				switch (vkCode) {
+				case MEDIA_PAPL:
 					switch (curStatus.PlayStatus) {
 					case PlayingStatus.Paused:
 						curStatus.PlayStatus = PlayingStatus.Playing;
@@ -161,13 +217,14 @@ namespace discordify {
 						break;
 					}
 					UpdatePresence();
-				} else if (vkCode == MEDIA_NEXT || vkCode == MEDIA_PREV) {
-					// If it's been more than 5 seconds since the last track switch
-					// we can update the presence again
+					break;
+				case MEDIA_NEXT:
+				case MEDIA_PREV:
 					if (DateTime.UtcNow.Subtract(lastSwitch) >= TimeSpan.FromSeconds(5)) {
 						lastSwitch = DateTime.UtcNow;
 						UpdatePresence();
 					}
+					break;
 				}
 			}
 			return CallNextHookEx(_hookID, nCode, wParam, lParam);
