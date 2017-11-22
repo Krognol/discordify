@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Diagnostics;
 using System.Windows.Forms;
-using System.Runtime.InteropServices;
 using System.Configuration;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using spotify;
 using discordrpc;
 
@@ -18,6 +18,9 @@ namespace discordify {
 		public string CurArtist;
 		public string CurTrack;
 		public PlayingStatus PlayStatus;
+		public int DurationMs;
+		public DateTime Start;
+		public DateTime PausedAt;
 	}
 
 	public partial class Form1 : Form {
@@ -30,11 +33,9 @@ namespace discordify {
 		public static IntPtr _hookID = IntPtr.Zero;
 
 		// Media virtual key codes
-		// can probably remove the MUTE one
 		private const int MEDIA_NEXT = 0xB0;
 		private const int MEDIA_PREV = 0xB1;
-		private const int MEDIA_PAPL = 0xB3;
-		private const int MEDIA_MUTE = 0xAD;
+		private const int MEDIA_PAPL = 0xB3; // Play/Pause
 
 		private static string DISCORD_CLIENT_ID;
 		private static string SPOTIFY_CLIENT_ID;
@@ -45,18 +46,21 @@ namespace discordify {
 		private static Status curStatus;
 		private static DateTime lastSwitch = DateTime.UtcNow;
 		private static bool initialized = false;
+		private bool quitting = false;
 
-		// Used for other music players
-		private static List<string> otherProcessNames = new List<string>();
-		private static List<string> otherProcessSeparator = new List<string>();
+		// Used for other players
+		private static List<string> processNames = new List<string>();
+		private static string otherProcessSeparator;
 
 		public Form1() {
 			InitializeComponent();
 
 			FormClosing += (object o, FormClosingEventArgs e) => {
-				e.Cancel = true;
-				Visible = false;
-				ShowInTaskbar = false;
+				if (!quitting) {
+					e.Cancel = true;
+					Visible = false;
+					ShowInTaskbar = false;
+				}
 			};
 
 			var tray = new NotifyIcon {
@@ -64,18 +68,14 @@ namespace discordify {
 				Icon = new System.Drawing.Icon("Resources/tray_icon.ico")
 			};
 			var contexMenu = new ContextMenu();
-			contexMenu.MenuItems.Add(new MenuItem("Connect", discordConnectButton_Click));
-			contexMenu.MenuItems.Add(new MenuItem("Disconnect", discordDisconnectButton_Click));
-			contexMenu.MenuItems.Add(new MenuItem("Quit", (object o, EventArgs e) => {
-				DiscordRpc.Shutdown();
-				Application.Exit();
-			}));
 			contexMenu.MenuItems.Add(new MenuItem("Show", (object o, EventArgs e) => {
 				if (!Visible) {
 					Visible = true;
 					ShowInTaskbar = true;
 				}
 			}));
+			contexMenu.MenuItems.Add(new MenuItem("Initialize", discordConnectButton_Click));
+			contexMenu.MenuItems.Add(new MenuItem("Quit", discordQuitButton_Click));
 			tray.ContextMenu = contexMenu;
 			tray.Visible = true;
 
@@ -84,17 +84,21 @@ namespace discordify {
 			SPOTIFY_CLIENT_SECRET = ConfigurationManager.AppSettings["spotify_client_secret"];
 
 			if (ConfigurationManager.AppSettings["other_process_name"] != null)
-				otherProcessNames.Add(ConfigurationManager.AppSettings["other_process_name"]);
-			otherProcessSeparator.Add(otherProcessNames.Count > 0 && ConfigurationManager.AppSettings["other_process_sep"] != null ?
+				processNames.Add(ConfigurationManager.AppSettings["other_process_name"]);
+			otherProcessSeparator = (processNames.Count > 0 && ConfigurationManager.AppSettings["other_process_sep"] != null ?
 				ConfigurationManager.AppSettings["other_process_sep"] : "");
 
-			otherProcessNames.Add("Spotify");
+			processNames.Add("Spotify");
 
 			// Initialize the Spotify client
 			spotifyClient = new Spotify(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
 
-			// These won't change if your application is set up properly 
-			// so init them at the start
+			// This won't change if your application is set up properly 
+			// so init them at the start.
+			// Of course it's not necessary; if you don't have a spotify_large asset
+			// Discord simply won't show anything but the details
+			// however it looks kinda boring without it.
+			// Of course you can do whatever, I'm not your boss
 			presence.largeImageKey = "spotify_large";
 
 			curStatus = new Status {
@@ -107,11 +111,6 @@ namespace discordify {
 		}
 
 		private void updateStatus(string text) => toolStripStatusLabel2.Text = text;
-
-		// Call DiscordRpc.Shutdown when clicking disconnect button
-		// This is probably redundant though since we call Shutdown
-		// on FormClosing
-		private void discordDisconnectButton_Click(object sender, EventArgs e) => DiscordRpc.Shutdown();
 
 		// DiscordRpc Ready callback
 		private void Ready() => updateStatus("Ready!");
@@ -143,25 +142,27 @@ namespace discordify {
 			DiscordRpc.Initialize(DISCORD_CLIENT_ID, ref handlers, true, null);
 			DiscordRpc.RunCallbacks();
 			initialized = true;
-			updateStatus("Connected!");
+			timer1.Enabled = true;
+			updateStatus("Initialized!");
 		}
 
 		private async void UpdatePresence() {
-			if (!initialized) return;
+			if (!initialized || curStatus.PlayStatus == PlayingStatus.Paused) return;
 
 			if (SPOTIFY_CLIENT_ID == "" || SPOTIFY_CLIENT_SECRET == "") {
 				updateStatus("Missing Spotify client ID or secret!");
 				return;
 			}
 
-			string[] splitChar = { " - " };
+			string[] splitChar = new string[1];
 			string track = "", artist = "";
 
-			foreach (var name in otherProcessNames)
-				using (var proc = (from p in Process.GetProcessesByName(name) where p.MainWindowTitle != "" select p).First()) {
-					if (name != "Spotify") splitChar = otherProcessSeparator.ToArray();
+			foreach (var name in processNames)
+				using (var proc = Process.GetProcessesByName(name).First(p => !string.IsNullOrEmpty(p.MainWindowTitle))) {
+					if (name != "Spotify") splitChar[0] = otherProcessSeparator;
+					else splitChar[0] = " - ";
 					var titleSplit = proc.MainWindowTitle.Split(splitChar, 2, StringSplitOptions.None);
-					if(titleSplit.Length > 1){
+					if (titleSplit.Length > 1) {
 						artist = titleSplit[0];
 						track = titleSplit[1];
 					}
@@ -169,7 +170,7 @@ namespace discordify {
 				}
 
 			// Check so we're actually playing something
-			if (track == "" || artist == "") return;
+			if (track == "" && artist == "") return;
 
 			// Check so the current artist and track aren't the same as
 			if (curStatus.CurArtist == artist && curStatus.CurTrack == track) return;
@@ -186,17 +187,21 @@ namespace discordify {
 			if (tracks != null && tracks?.Items.Count > 0) {
 				var item = tracks?.Items[0];
 				presence.details = $"Listening to {item?.Name} by {item?.Artists[0].Name}";
+				presence.smallImageKey = "spotify_small_playing";
 
 				var now = DateTime.UtcNow;
+				curStatus.DurationMs = (int)item?.DurationMs;
+				curStatus.Start = now;
 				presence.startTimestamp = DateTimeToTimestamp(now);
-				presence.endTimestamp = DateTimeToTimestamp(now.AddMilliseconds((int)tracks?.Items[0].DurationMs));
+				presence.endTimestamp = DateTimeToTimestamp(now.AddMilliseconds((int)item?.DurationMs));
 
 				DiscordRpc.UpdatePresence(ref presence);
-				updateStatus(string.Format("Updated status: {0} y {1}", item?.Name, item?.Artists[0].Name));
+				updateStatus(string.Format("Updated status: {0}", presence.details));
 			}
 		}
 
 		private void discordQuitButton_Click(object sender, EventArgs e) {
+			quitting = true;
 			DiscordRpc.Shutdown();
 			Application.Exit();
 		}
@@ -227,15 +232,46 @@ namespace discordify {
 					switch (curStatus.PlayStatus) {
 					case PlayingStatus.Paused:
 						curStatus.PlayStatus = PlayingStatus.Playing;
+
+						// Set the start time from un-pausing to now
+						var now = DateTime.UtcNow;
+						presence.startTimestamp = DateTimeToTimestamp(now);
+
+						// Get the elapsed time of the playing track
+						// and update the end time
+						var remaining = curStatus.Start
+							.Subtract(curStatus.PausedAt)
+							.Add(TimeSpan.FromMilliseconds(curStatus.DurationMs));
+						presence.endTimestamp = DateTimeToTimestamp(now.Add(remaining));
+						presence.smallImageKey = "spotify_small_playing";
+
+						// Enable the timer again when un-pausing
+						self.timer1.Enabled = true;
+
+						DiscordRpc.UpdatePresence(ref presence);
 						break;
 					case PlayingStatus.Playing:
 						curStatus.PlayStatus = PlayingStatus.Paused;
+						curStatus.PausedAt = DateTime.UtcNow;
+
+						presence.smallImageKey = "spotify_small_paused";
+						presence.startTimestamp = 0;
+						presence.endTimestamp = 0;
+
+						// Don't check for updates while paused.
+						self.timer1.Enabled = false;
+
+						DiscordRpc.UpdatePresence(ref presence);
 						break;
 					}
-					self.UpdatePresence();
 					break;
 				case MEDIA_NEXT:
 				case MEDIA_PREV:
+					if(curStatus.PlayStatus == PlayingStatus.Paused) {
+						curStatus.PlayStatus = PlayingStatus.Playing;
+						self.timer1.Enabled = true;
+					}
+					
 					if (DateTime.UtcNow.Subtract(lastSwitch) >= TimeSpan.FromSeconds(5)) {
 						lastSwitch = DateTime.UtcNow;
 						self.UpdatePresence();

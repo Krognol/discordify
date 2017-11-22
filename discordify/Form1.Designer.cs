@@ -28,7 +28,6 @@
 			this.toolStripStatusLabel2 = new System.Windows.Forms.ToolStripStatusLabel();
 			this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
 			this.discordConnectButton = new System.Windows.Forms.Button();
-			this.discordDisconnectButton = new System.Windows.Forms.Button();
 			this.timer1 = new System.Windows.Forms.Timer(this.components);
 			this.discordQuitButton = new System.Windows.Forms.Button();
 			this.statusStrip1.SuspendLayout();
@@ -66,19 +65,8 @@
 			this.discordConnectButton.UseVisualStyleBackColor = true;
 			this.discordConnectButton.Click += new System.EventHandler(this.discordConnectButton_Click);
 			// 
-			// discordDisconnectButton
-			// 
-			this.discordDisconnectButton.Location = new System.Drawing.Point(172, 12);
-			this.discordDisconnectButton.Name = "discordDisconnectButton";
-			this.discordDisconnectButton.Size = new System.Drawing.Size(75, 23);
-			this.discordDisconnectButton.TabIndex = 3;
-			this.discordDisconnectButton.Text = "Shutdown";
-			this.discordDisconnectButton.UseVisualStyleBackColor = true;
-			this.discordDisconnectButton.Click += new System.EventHandler(this.discordDisconnectButton_Click);
-			// 
 			// timer1
 			// 
-			this.timer1.Enabled = true;
 			this.timer1.Interval = 10000;
 			this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
 			// 
@@ -98,7 +86,6 @@
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(434, 73);
 			this.Controls.Add(this.discordQuitButton);
-			this.Controls.Add(this.discordDisconnectButton);
 			this.Controls.Add(this.discordConnectButton);
 			this.Controls.Add(this.statusStrip1);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
@@ -117,7 +104,6 @@
 		#endregion
 		private System.Windows.Forms.StatusStrip statusStrip1;
 		private System.Windows.Forms.Button discordConnectButton;
-		private System.Windows.Forms.Button discordDisconnectButton;
 		private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
 		private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel2;
 		private System.Windows.Forms.Timer timer1;
