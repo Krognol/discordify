@@ -11,7 +11,7 @@ There's a pre-built binary under releases for Windows. You just have to edit the
 * * Upload a large asset for an icon and name it `spotify_large`.
 * * You'll also want to get the `discord-rpc-w32.dll` from the `lib` dir or from [the official discord-rpc repo](https://github.com/discordapp/discord-rpc).
 * Create a Spotify api application, and copy the Client ID and secret and set that in `App.config:spotify_client_id/secret`
-* Launch discordify and click on `Connect`
+* Launch discordify and click on `Initialize`
 * Go to your settings in Discord, and go to Games
 * Click on `Add it!` next to `Not seeing your game?`
 * Click on `Discordify.exe`
