@@ -21,7 +21,7 @@ You can add a lookup for another music application in the config file under the 
 E.g. 
 ```xml
 <add key="other_process_name" value="other music program name">
-<add key="other_process_sep" value="the separator">
+<add key="other_process_sep" value="the track title, artist separator">
 ```
 
 You should see a rich presence on your profile if you click on it after a few seconds.
