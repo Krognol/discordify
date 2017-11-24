@@ -104,7 +104,7 @@ namespace discordify {
 			curStatus = new Status {
 				CurArtist = "",
 				CurTrack = "",
-				PlayStatus = PlayingStatus.Paused
+				PlayStatus = PlayingStatus.Playing
 			};
 
 			self = this;
@@ -140,10 +140,10 @@ namespace discordify {
 			handlers.errorCallback += Error;
 
 			DiscordRpc.Initialize(DISCORD_CLIENT_ID, ref handlers, true, null);
+			updateStatus("Initialized!");
 			DiscordRpc.RunCallbacks();
 			initialized = true;
 			timer1.Enabled = true;
-			updateStatus("Initialized!");
 		}
 
 		private async void UpdatePresence() {
