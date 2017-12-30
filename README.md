@@ -28,7 +28,7 @@ This is a little harder than the Spotify App. However, it'll be easy if you just
 * (Optional) Do the following if you want to display the Spotify logo (or anything, for that matter) to the left of your currently playing music.
 	* On the Discord developer portal, browse to the "Rich Presence Assets" section.
 	* Enter the name `spotify_large`, select the type you want, and select an image from your computer.
-		* Want the default Spotify logo? Save [this image](https://i.imgur.com/2sCvm0v.png) to your computer by right-clicking the link and clicking "Save link as".
+		* Want to use the default Spotify logo? Save [this image](https://i.imgur.com/2sCvm0v.png) to your computer by right-clicking the link and clicking "Save link as".
 	* Click the `Upload Asset` button.
 * Click the `Save changes` (just to be sure everything went to plan).
 * You're done!
